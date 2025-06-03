@@ -19,15 +19,20 @@ export interface Task {
   updatedAt: string;
 }
 
+// Updated AuthResponse
 export interface AuthResponse {
   accessToken: string;
-  tokenType: string;
-  user: User;
+  refreshToken?: string;
+  id?: number;
+  username?: string;
+  email?: string;
+  roles?: string[];
+  type?: string; // Usually "Bearer"
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  username?: string; // Made optional
+  password?: string; // Made optional
 }
 
 export interface RegisterRequest {
