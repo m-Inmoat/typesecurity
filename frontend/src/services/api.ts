@@ -1,9 +1,8 @@
 // src/services/api.ts
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8080/api'; // Ensure this matches backend
 
-// Create axios instance with default config
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -11,7 +10,6 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -25,7 +23,6 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for handling errors
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -33,33 +30,38 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // Handle token expiration
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
-        // Attempt to refresh token
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
+          // Use the correct endpoint and payload format
           const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-          const { accessToken } = response.data;
+          const { accessToken } = response.data; // Assuming response is { accessToken: "new_token" }
           
           localStorage.setItem('token', accessToken);
           
-          // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return axios(originalRequest);
+        } else {
+          // No refresh token available, logout or redirect
+          authService.logout(); // Call logout from authService
+          window.location.href = '/login'; // Or use React Router for navigation
         }
       } catch (refreshError) {
-        // If refresh fails, redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        console.error('Token refresh failed:', refreshError);
+        authService.logout(); // Call logout from authService
+        window.location.href = '/login'; // Redirect to login
+        return Promise.reject(refreshError);
       }
     }
     
     return Promise.reject(error);
   }
 );
+
+// Import authService at the end to avoid circular dependencies if api is imported in authService
+import authService from './authService';
 
 export default api;
